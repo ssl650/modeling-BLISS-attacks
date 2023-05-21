@@ -1,0 +1,6 @@
+*.swp
+*~
+*.o
+src/bliss
+src/demo
+src/.*

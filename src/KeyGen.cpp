@@ -47,7 +47,7 @@ knowledge of the CeCILL license and that you accept its terms.
 
 static MYFFT fftKeygen;
 
-#define DEBUG 1
+#define DEBUG 0
 
 /*
 	KeyGen class constructor
@@ -164,7 +164,7 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	if (keyNkS>normNkS) {
 		goto startkg;
 	}
-
+	std::cout << "Secret key generated..." << std::endl;
 	/* Creation public key */
 	NTL::ZZ_pE aq;
 	NTL::ZZ_pX pX;
@@ -196,6 +196,8 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 		std::cout << pk.a1[pk.offset+i] << ", ";
 	std::cout << "||" << pk.a2 << "]" << std::endl;
 #endif
+
+	std::cout << "Public key generated..." << std::endl;
 
 	pk.a_fft = new long[N];
 	for (i=0; i<N; i++) {

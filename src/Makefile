@@ -41,13 +41,13 @@ CXXFLAGS= -march=native -mtune=native -O3 -std=gnu++11 -Wall -I/usr/include/eige
 SRCS    = Entropy.cpp Fft.cpp KeyGen.cpp Sampler.cpp Setup.cpp Sign.cpp Verify.cpp
 OBJS    = $(subst .cpp,.o,$(SRCS))
 
-demo: demo.o $(OBJS)
-	$(CXX) -o demo demo.o $(OBJS) $(LDFLAGS)
+model: model.o $(OBJS)
+	$(CXX) -o model model.o $(OBJS) $(LDFLAGS)
 
 bliss: main.o $(OBJS)
 	$(CXX) -o bliss main.o $(OBJS) $(LDFLAGS)
 
-all: demo bliss
+all: model bliss
 
 clean:
 	rm -f *.o bliss histo.dat

@@ -44,6 +44,7 @@ knowledge of the CeCILL license and that you accept its terms.
 
 #include <algorithm>    // std::sort
 #include <vector>       // std::vector
+#include <map>
 
 static MYFFT fftKeygen;
 
@@ -150,6 +151,7 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	sk.ls1[sk.offset+0] = (unsigned char) (NTL::to_long(coeff(sk.s1, 0)) +2);
 	sk.ls2[sk.offset+0] = (unsigned char) (NTL::to_long(coeff(sk.s2, 0)) +2);
 
+    // s2 = 2 * g + 1
 	sk.s2 = sk.s2*2+1;
 #if DEBUG
 	std::cout << "2g+1 =" << sk.s2 << std::endl;
@@ -161,6 +163,7 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 #if DEBUG
 	std::cout << "keyNkS=" << keyNkS << "/" << normNkS << std::endl;
 #endif
+    // TODO: find out about parameters requirements
 	if (keyNkS>normNkS) {
 		goto startkg;
 	}
@@ -206,6 +209,17 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	for (i=0; i<N; i++)
 		pk.a_fft[i] = bmodQ(pk.a_fft[i]);
 	pk.modulus = 2*Q;
+
+    NTL::ZZ_pX tmp_aq_px;
+    NTL::ZZ_pE tmp_aq_pe;
+    NTL::conv(tmp_aq_px, sk.s2);
+    NTL::conv(this->aq, tmp_aq_px);
+    NTL::inv(this->aq, this->aq);
+    NTL::conv(tmp_aq_px, sk.s1);
+    NTL::conv(tmp_aq_pe, tmp_aq_px);
+    NTL::mul(this->aq, this->aq, tmp_aq_pe);
+
+    std::cout << "aq: " << this->aq << std::endl;
 }
 
 /*

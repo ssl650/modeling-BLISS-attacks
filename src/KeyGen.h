@@ -64,6 +64,7 @@ class KeyGen {
 	public:
 		struct seckey sk;
 		struct pubkey pk;
+        NTL::ZZ_pE aq;
 		
 		KeyGen(const Setup setup, Entropy* random);
 

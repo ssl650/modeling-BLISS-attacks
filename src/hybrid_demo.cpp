@@ -1,13 +1,11 @@
 #include "Parameters.h"
 #include "Setup.h"
+#include "Sampler.h"
 #include "KeyGen.h"
-#include "Sign.h"
-#include "Verify.h"
 #include <iostream>
 #include <NTL/LLL.h>
 #include <NTL/mat_ZZ.h>
 #include <NTL/vec_ZZ.h>
-#include <NTL/ZZ_p.h>
 #include <map>
 #include <random>
 #include <algorithm>
@@ -19,12 +17,11 @@ inline double static calculateHermitFactor(double beta)
 }
 
 //TODO: reorganize parameters set
-#define beta 20 // block size for BKZ
-#define m (2 * N) // lattice dimension
+#define beta 10 // block size for BKZ
 #define r N // meet-in-the-middle dimension
-#define delta 0.99
-#define prune 10 //???
-#define max_box 32768
+#define delta 0.75
+
+int attackTime;
 
 // Function to permute an NTL vector
 void permuteVector(NTL::vec_ZZ& vector)
@@ -52,8 +49,6 @@ void vectors_for_A(long y, NTL::vec_ZZ x, NTL::mat_ZZ& res)
         if (x[i] <= border_c and x[i] >= border_f)
         {
             rows *= 2;
-            if(rows > 32768)
-                break;
             result[i] = -1;
         }
         else if (x[i] > border_c)
@@ -62,7 +57,6 @@ void vectors_for_A(long y, NTL::vec_ZZ x, NTL::mat_ZZ& res)
             result[i] = 0;
     }
     res.SetDims(rows, N);
-    std::cout << "count of boxes: " << rows << std::endl;
 
     // инициализация всех столбцов
     for (int i = 0; i < rows; i++)
@@ -81,12 +75,12 @@ void vectors_for_A(long y, NTL::vec_ZZ x, NTL::mat_ZZ& res)
     }
 }
 
-void initialize_vg_(NTL::vec_ZZ &vg_, std::map<int, int> c)
+void initialize_vg(NTL::vec_ZZ &vg_, std::map<int, int> c)
 {
     static int k = 2;
     vg_.SetLength(r);
     int counter = 0;
-    for (int i = -2; i < k + 1; ++i)
+    for (int i = -k; i < k + 1; ++i)
     {
         for (int j = 0; j < c[i]; ++j)
         {
@@ -94,13 +88,15 @@ void initialize_vg_(NTL::vec_ZZ &vg_, std::map<int, int> c)
         }
     }
 
-    std::cout << "Default vg':";
-    std::cout << vg_ << std::endl;
-
     permuteVector(vg_);
 
-    std::cout << "Permuted vg':";
-    std::cout << vg_ << std::endl;
+}
+
+NTL::mat_ZZ GSO(const NTL::mat_ZZ& input) {
+    NTL::mat_RR mu;
+    NTL::vec_RR c;
+    ComputeGS(input, mu, c);
+    return input;
 }
 
 void cyclic_shift_row(NTL::mat_ZZ& mat, long rowIndex, long shiftAmount)
@@ -141,41 +137,82 @@ NTL::vec_ZZ NP(const NTL::mat_ZZ& B, const NTL::mat_ZZ& B_gs, const NTL::vec_ZZ&
     return t-v;
 }
 
+NTL::vec_ZZ get_key_vector(NTL::vec_ZZ &vl)
+{
+    static const int y = 2;
+
+    NTL::vec_ZZ res;
+
+    NTL::mat_ZZ A_z, B_z;
+    A_z.SetDims(1, N);
+    B_z.SetDims(1, N);
+
+    // set A's boxes
+    vectors_for_A(y, vl, A_z);
+
+    int rowsNum = A_z.NumRows();
+    res.SetLength(rowsNum << 1);
+
+    for (int q = 0; q < rowsNum; ++q)
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            res[q] = res[q] << 1 | A_z[q][i];
+        }
+    }
+
+    // set B's boxes
+    vectors_for_A(y, -vl, B_z);
+    rowsNum = B_z.NumRows();
+    for (int q = 0; q < rowsNum; ++q)
+    {
+        for (int i = 0; i < N; ++i)
+        {
+            res[q + rowsNum] = res[q + rowsNum] << 1 | B_z[q][i];
+        }
+    }
+
+    std::partial_sort_copy(res.begin(), res.end(), res.begin(), res.end());
+
+    return res;
+}
 
 void hybrid_attack(KeyGen & key) {
-    NTL::mat_ZZ B, B_gs, A;
+    NTL::mat_ZZ B, B_reduced, B_gs, A;
     B = Q * NTL::ident_mat_ZZ(N);
-    B_gs = B;
+    B_reduced = B;
 
     std::cout << "beta: " << beta << std::endl;
     std::cout << "delta: " << delta << std::endl;
     //std::cout << B << std::endl;
 
     std::cout << "matrix reduction..." << std::endl;
-    NTL::BKZ_FP(B_gs, delta, beta, prune);
+    NTL::BKZ_FP(B_reduced, delta, beta);
+    B_gs = GSO(B_reduced);
 
     // infinity norm of vl, vg
     const int y = 2, k = 2;
 
     // ci entries
     std::map<int, int> c;
-    c.insert({-2, 29});
-    c.insert({2, 29});
-    c.insert({-1, 99});
-    c.insert({1, 99});
-    c.insert({0, 256});
+    int ostatok = r/N * to_int(key.d2 + key.d2_ + key.d1 + key.d1_);
+    c.insert({-2, r/N * to_int(key.d2)}); //red
+    c.insert({2, r/N * to_int(key.d2)});   // green
+    c.insert({-1, r/N * to_int(key.d1)}); //gray
+    c.insert({1, r/N * to_int(key.d1)}); //pink
+    c.insert({0, N - ostatok}); //white
 
     while (true)
     {
         // guess vg'
         NTL::vec_ZZ vg_;
-        initialize_vg_(vg_, c);
+        initialize_vg(vg_, c);
 
         // rotation matrix
         NTL::mat_ZZ A;
         NTL::ZZ_pX aq_px;
         NTL::ZZX aq_x;
-        NTL::conv(aq_px, key.pk.aq);
+        NTL::conv(aq_px, key.aq_invert);
         NTL::conv(aq_x, aq_px);
 
         A.SetDims(N, N);
@@ -188,54 +225,58 @@ void hybrid_attack(KeyGen & key) {
             cyclic_shift_row(A, q, q);
         }
         A = 2 * A;
-        std::cout << "matrix C is ready..." << std::endl;
 
         // calculate vl' by The Nearest Plane Algorithm
         NTL::vec_ZZ vl_ = NP(B, B_gs, A * vg_);
-        std::cout << "vl':" << std::endl;
-        std::cout << vl_ << std::endl;
+        NTL::vec_ZZ keyVg_ = get_key_vector(vl_);
 
-        // set A's boxes
-        NTL::mat_ZZ A_z;
-        A_z.SetDims(1, N);
-        vectors_for_A(y, vl_, A_z);
-        if (A_z.NumRows() > 32768)
-            continue;
+        // create an instance of an engine.
+        std::random_device rnd_device;
+        // Specify the engine and distribution.
+        std::mt19937 mersenne_engine {rnd_device()};
+        // Generates random integers
+        std::uniform_int_distribution<int> dist {-k, k};
+        auto gen = [&dist, &mersenne_engine](){
+            return dist(mersenne_engine);
+        };
 
-        NTL::mat_ZZ B_z;
-        B_z.SetDims(1, N);
-        vectors_for_A(y, -vl_, B_z);
-        std::cout << "count of boxes all: " << A_z.NumRows()*2 << std::endl;
-
-        for (int i = 0; i < A_z.NumRows(); i++)
+        for (int q = 0; q < std::min((long)std::pow(5, N), 10000l); ++q)
         {
-            NTL::vec_ZZ vgg_;
-            vgg_.SetLength(N);
-            for (long j = 0; j < N; j++)
+            NTL::vec_ZZ vg__;
+            vg__.SetLength(r);
+            std::generate(std::begin(vg__), std::end(vg__), gen);
+
+            // same vector -> not collision
+            if (vg_ == vg__)
             {
-                vgg_[j] = vg_[j] * A_z[i][j];
-            }
-            if (vgg_ == vg_)
                 continue;
-            else
+            }
+
+            NTL::vec_ZZ vl__ = NP(B, B_gs, A * vg__);
+            NTL::vec_ZZ keyVg__ = get_key_vector(vl__);
+
+            // collision
+            if (keyVg_ == keyVg__)
             {
-                std::cout << key.sk.g << std::endl;
-                std::cout << key.sk.s1 << std::endl;
-                std::cout << key.sk.s2 << std::endl;
-                std::cout << vgg_ << std::endl;
-                std::cout << vg_ << std::endl;
-                break;
-                NTL::vec_ZZ ssk;
-                ssk.SetLength(N);
-                NTL::conv(ssk, key.sk.g);
-                if (vg_ == ssk || vgg_ == ssk)
+                NTL::vec_ZZ vg = vg_ + vg__;
+
+                NTL::ZZX vgX;
+                NTL::conv(vgX, vg);
+                std::cout << vg << std::endl;
+
+                // check found vector
+                if (vgX == key.g)
                 {
-                    std::cout << "LUCK" << std::endl;
-                    return;
+
+                    std::cout << "Ok" << std::endl;
+                    std::cout << "time: " << (float)(clock() - attackTime) / CLOCKS_PER_SEC << " s" << std::endl;
+                    std::cout << "vg: " << vg << std::endl;
+                    std::cout << "vg': " << vg_ << std::endl;
+                    std::cout << "vg'': " << vg__ << std::endl;
+                    exit(0);
                 }
             }
         }
-        break;
     }
 }
 
@@ -249,6 +290,7 @@ int main(int argc, char **argv)
     Sampler sampler(sigma, alpha_rejection, &random);
     KeyGen key(setup, &random);
 
+    attackTime = clock();
     hybrid_attack(key);
     return 0;
 }

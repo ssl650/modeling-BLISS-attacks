@@ -7,3 +7,4 @@ src/.*
 /src/cmake-build-debug/*
 /src/hybrid_demo
 /Hybrid-Attack-binary-LWE/
+/src/hybrid

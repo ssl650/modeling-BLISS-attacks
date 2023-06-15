@@ -49,5 +49,8 @@ bliss: main.o $(OBJS)
 
 all: model bliss
 
+hybrid: hybrid_demo.o $(OBJS)
+	$(CXX) -o hybrid hybrid_demo.o $(OBJS) $(LDFLAGS)
+
 clean:
 	rm -f *.o bliss histo.dat

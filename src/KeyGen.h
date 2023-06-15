@@ -64,8 +64,13 @@ class KeyGen {
 	public:
 		struct seckey sk;
 		struct pubkey pk;
-        NTL::ZZ_pE aq;
-		
+        NTL::ZZ_pE aq_invert;
+        NTL::ZZX g;
+        NTL::ZZ d1;
+        NTL::ZZ d1_;
+        NTL::ZZ d2;
+        NTL::ZZ d2_;
+
 		KeyGen(const Setup setup, Entropy* random);
 
 		unsigned long norm2(NTL::ZZX& a);

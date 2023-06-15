@@ -19,9 +19,5 @@ add_executable(modeling_BLISS_attacks
         Sampler.cpp
         Sampler.h
         Setup.cpp
-        Setup.h
-        Sign.cpp
-        Sign.h
-        Verify.cpp
-        Verify.h)
+        Setup.h)
 target_link_libraries(modeling_BLISS_attacks ntl gmpxx gmp mpfr crypto boost_program_options)

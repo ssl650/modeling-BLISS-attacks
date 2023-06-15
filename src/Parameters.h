@@ -41,10 +41,67 @@ knowledge of the CeCILL license and that you accept its terms.
 #define _PARAMETERS_H
 
 #include <NTL/ZZ_pE.h>
-#define CLASS 1
+#define CLASS 6
 // 0 = Fun, 1 = speed, 2 = size, 3 = security 160, 4 = security 192
 
-#if CLASS == 0
+#if CLASS == 5 // N=4  Q=7681
+
+#define N 4
+#define log2N 2
+#define alpha_rejection 1
+#define Q 7681// 513
+#define kappa 23
+#define density 0.3
+#define density2 0.2 //0
+#define C 1.62
+#define sigma 100
+#define B_VERIFY 512*512
+#define BINFTY 542
+
+#define dropped_bits 10
+#define oneQTwo 3841//  257 // 1/(q+2) mod 2q  Q/2+0.5
+
+#define modp 24
+
+#elif CLASS == 6 // N=4  Q=513
+
+#define N 4
+#define log2N 2
+#define alpha_rejection 1
+#define Q  513
+#define kappa 23
+#define density 0.4
+#define density2 0 //0
+#define C 1.62
+#define sigma 100
+#define B_VERIFY 512*512
+#define BINFTY 542
+
+#define dropped_bits 10
+#define oneQTwo 257 // 1/(q+2) mod 2q  Q/2+0.5
+
+#define modp 24
+
+#elif CLASS == 16 // N=16
+
+#define N 16 //512
+#define log2N 4
+#define alpha_rejection 1
+#define Q 12289
+#define kappa 23
+#define density 0.3
+#define density2 0.2 //0
+#define C 1.62
+#define sigma 215
+#define B_VERIFY 12872*12872
+#define BINFTY 2100
+
+#define dropped_bits 10
+#define oneQTwo 6145 // 1/(q+2) mod 2q
+
+#define modp 24
+
+#elif CLASS == 1
 
 #define N 256
 #define log2N 8
@@ -53,15 +110,12 @@ knowledge of the CeCILL license and that you accept its terms.
 #define kappa 12
 #define density 0.55
 #define density2 0.15
-
 #define C 1.5
-
 #define sigma 100
 #define dropped_bits 5
 #define B_VERIFY 2428*2428
 #define BINFTY 542
 #define Q 7681
-
 #define oneQTwo 3841// 1/(q+2) mod 2q
 #define modp 480
 
@@ -145,15 +199,29 @@ knowledge of the CeCILL license and that you accept its terms.
 #endif
 
 // FFT
+#if (Q == 513)
 
-#if (Q==7681)
+#define normalization_factor 385 // решение сравнения nx = 1 (mod Q)
+#define oneoverQ 8372255
+#define oneover2Q 4186127
+
+const long W[2*N+1] = {1, 62, 3844, 217, 5773, 4600, 1003, 738, 7351};
+
+const unsigned long W2[2*N+1] = {2401607092007492U, 148899639704464548U, 9231777661676802032U,
+                                 521148738965625921U, 13864477742159255497U, 11047392623234466532U,
+                                 2408811913283515202U, 1772386033901529630U, 17654213733347079016U};
+
+const long flip[N] = {0, 128, 64, 192};
+
+#elif (Q==7681)
 
 #define normalization_factor 7651 // 1/N mod QQQ
 #define oneoverQ 559167 // floor(2^32/Q)
 #define oneover2Q 279583 // floor(2^32/2Q)
 
 // W^i; W=root of g^(2n)-1
-const long W[2*N+1] = {1, 62, 3844, 217, 5773, 4600, 1003, 738, 7351, 2583, 6526, 5200, 7479,
+const long W[2*N+1] = {1, 62, 3844, 217, 5773, 4600, 1003, 738, 7351};
+/*, 2583, 6526, 5200, 7479,
 2838, 6974, 2252, 1366, 201, 4781, 4544, 5212, 542, 2880, 1897, 2399,
 2799, 4556, 5956, 584, 5484, 2044, 3832, 7154, 5731, 1996, 856, 6986,
 2996, 1408, 2805, 4928, 5977, 1886, 1717, 6601, 2169, 3901, 3751, 2132,
@@ -195,7 +263,7 @@ const long W[2*N+1] = {1, 62, 3844, 217, 5773, 4600, 1003, 738, 7351, 2583, 6526
 5999, 3250, 1794, 3694, 6279, 5248, 2774, 3006, 2028, 2840, 7098, 2259,
 1800, 4066, 6300, 6550, 6688, 7563, 365, 7268, 5118, 2395, 2551, 4542,
 5088, 535, 2446, 5713, 880, 793, 3080, 6616, 3099, 113, 7006, 4236,
-1478, 7145, 5173, 5805, 6584, 1115, 1};
+1478, 7145, 5173, 5805, 6584, 1115, 1};*/
 
 //
 //for i in range(513):
@@ -203,7 +271,8 @@ const long W[2*N+1] = {1, 62, 3844, 217, 5773, 4600, 1003, 738, 7351, 2583, 6526
 //
 const unsigned long W2[2*N+1] = {2401607092007492U, 148899639704464548U, 9231777661676802032U,
 521148738965625921U, 13864477742159255497U, 11047392623234466532U,
-2408811913283515202U, 1772386033901529630U, 17654213733347079016U,
+2408811913283515202U, 1772386033901529630U, 17654213733347079016U};
+/*,
 6203351118655353707U, 15672887882440897519U, 12488356878438962166U,
 17961619441124038085U, 6815760927117264351U, 16748807859660254259U,
 5408419171200873615U, 3280595287682235061U, 482723025493506037U,
@@ -371,9 +440,10 @@ const unsigned long W2[2*N+1] = {2401607092007492U, 148899639704464548U, 9231777
 15889032520721571864U, 7442580378131219952U, 271381601396846677U,
 16825659286604494027U, 10173207641743739180U, 3549575281987074246U,
 17159482672393535515U, 12423513486954759863U, 13941329169103495265U,
-15812181093777332097U, 2677791907588354387U, 2401607092007492U};
+15812181093777332097U, 2677791907588354387U, 2401607092007492U};*/
 
-const long flip[N] = {0, 128, 64, 192, 32, 160, 96, 224, 16, 144, 80, 208, 48, 176, 112, 240,
+const long flip[N] = {0, 128, 64, 192};
+/*, 32, 160, 96, 224, 16, 144, 80, 208, 48, 176, 112, 240,
 8, 136, 72, 200, 40, 168, 104, 232, 24, 152, 88, 216, 56, 184, 120, 248,
 4, 132, 68, 196, 36, 164, 100, 228, 20, 148, 84, 212, 52, 180, 116, 244,
 12, 140, 76, 204, 44, 172, 108, 236, 28, 156, 92, 220, 60, 188, 124,
@@ -389,7 +459,7 @@ const long flip[N] = {0, 128, 64, 192, 32, 160, 96, 224, 16, 144, 80, 208, 48, 1
 51, 179, 115, 243, 11, 139, 75, 203, 43, 171, 107, 235, 27, 155, 91,
 219, 59, 187, 123, 251, 7, 135, 71, 199, 39, 167, 103, 231, 23, 151, 87,
 215, 55, 183, 119, 247, 15, 143, 79, 207, 47, 175, 111, 239, 31, 159,
-95, 223, 63, 191, 127, 255};
+95, 223, 63, 191, 127, 255};*/
 
 #elif (Q==12289)
 

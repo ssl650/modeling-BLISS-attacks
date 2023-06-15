@@ -48,7 +48,7 @@ knowledge of the CeCILL license and that you accept its terms.
 
 static MYFFT fftKeygen;
 
-#define DEBUG 0
+#define DEBUG 1
 
 /*
 	KeyGen class constructor
@@ -66,30 +66,108 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	unsigned long randomBit;
 
 	long nbNonZero = setup.get_nb_nonzero();
+	long nbNonZero_ = nbNonZero / 2;
+    nbNonZero -= nbNonZero_;
 	long nbNonZero2 = setup.get_nb_nonzero2();
-	long normNkS = setup.get_bound_NkS();
+	long nbNonZero2_ = nbNonZero2 / 2;
+    nbNonZero2 -= nbNonZero2_;
+
+    d1 = nbNonZero;
+    d1_ = nbNonZero_;
+    d2 = nbNonZero2;
+    d2_ = nbNonZero2_;
+
+    long normNkS = setup.get_bound_NkS();
 #if DEBUG
-	std::cout << "nbNonZero = " << nbNonZero << std::endl;
-	std::cout << "nbNonZero2 = " << nbNonZero2 << std::endl;
+	std::cout << "nbNonZero = " << setup.get_nb_nonzero() << std::endl;
+	std::cout << "nbNonZero2 = " << setup.get_nb_nonzero2() << std::endl;
 #endif
 
 	startkg:
 	NTL::clear(sk.s1);
 	NTL::clear(sk.s2);
+	NTL::clear(g);
 
 	i=0;
 	while (i < nbNonZero)
 	{
 		randomLong = random->getRandomLong();
-		randomBit = (randomLong&N)>>log2N;
 		randomLong = randomLong&(N-1);
 
 		if (NTL::to_long(NTL::coeff(sk.s1, randomLong)) == 0)
 		{
-			NTL::SetCoeff(sk.s1, randomLong, (randomBit) ? -1 : 1);
+			NTL::SetCoeff(sk.s1, randomLong, 1);
 			i++;
 		}
 	}
+
+    i=0;
+    while (i < nbNonZero_)
+    {
+        randomLong = random->getRandomLong();
+        randomLong = randomLong&(N-1);
+
+        if (NTL::to_long(NTL::coeff(sk.s1, randomLong)) == 0)
+        {
+            NTL::SetCoeff(sk.s1, randomLong, -1);
+            i++;
+        }
+    }
+
+	i=0;
+	while (i < nbNonZero2)
+	{
+		randomLong = random->getRandomLong();
+		randomLong = randomLong&(N-1);
+
+		if (NTL::to_long(NTL::coeff(sk.s1, randomLong)) == 0)
+		{
+			NTL::SetCoeff(sk.s1, randomLong, 2);
+			i++;
+		}
+	}
+
+    i=0;
+    while (i < nbNonZero2_)
+    {
+        randomLong = random->getRandomLong();
+        randomLong = randomLong&(N-1);
+
+        if (NTL::to_long(NTL::coeff(sk.s1, randomLong)) == 0)
+        {
+            NTL::SetCoeff(sk.s1, randomLong, -2);
+            i++;
+        }
+    }
+
+	i=0;
+	while (i < nbNonZero)
+	{
+		randomLong = random->getRandomLong();
+		randomLong = randomLong&(N-1);
+
+		if (NTL::to_long(NTL::coeff(sk.s2, randomLong)) == 0)
+		{
+			NTL::SetCoeff(sk.s2, randomLong, 1);
+			NTL::SetCoeff(g, randomLong, 1);
+			i++;
+		}
+	}
+
+    i=0;
+    while (i < nbNonZero_)
+    {
+        randomLong = random->getRandomLong();
+        randomLong = randomLong&(N-1);
+
+        if (NTL::to_long(NTL::coeff(sk.s2, randomLong)) == 0)
+        {
+            NTL::SetCoeff(sk.s2, randomLong, -1);
+            NTL::SetCoeff(g, randomLong, -1);
+            i++;
+        }
+    }
+
 	i=0;
 	while (i < nbNonZero2)
 	{
@@ -97,44 +175,33 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 		randomBit = (randomLong&N)>>log2N;
 		randomLong = randomLong&(N-1);
 
-		if (NTL::to_long(NTL::coeff(sk.s1, randomLong)) == 0)
-		{
-			NTL::SetCoeff(sk.s1, randomLong, (randomBit) ? -2 : 2);
-			i++;
-		}
-	}
-
-	i=0;
-	while (i < nbNonZero)
-	{
-		randomLong = random->getRandomLong();
-		randomBit = (randomLong&N)>>log2N;
-		randomLong = randomLong&(N-1);
-
 		if (NTL::to_long(NTL::coeff(sk.s2, randomLong)) == 0)
 		{
-			NTL::SetCoeff(sk.s2, randomLong, (randomBit) ? -1 : 1);
+			NTL::SetCoeff(sk.s2, randomLong, 2);
+            NTL::SetCoeff(g, randomLong, 2);
 			i++;
 		}
 	}
 
-	i=0;
-	while (i < nbNonZero2)
-	{
-		randomLong = random->getRandomLong();
-		randomBit = (randomLong&N)>>log2N;
-		randomLong = randomLong&(N-1);
+    i=0;
+    while (i < nbNonZero2_)
+    {
+        randomLong = random->getRandomLong();
+        randomBit = (randomLong&N)>>log2N;
+        randomLong = randomLong&(N-1);
 
-		if (NTL::to_long(NTL::coeff(sk.s2, randomLong)) == 0)
-		{
-			NTL::SetCoeff(sk.s2, randomLong, (randomBit) ? -2 : 2);
-			i++;
-		}
-	}
+        if (NTL::to_long(NTL::coeff(sk.s2, randomLong)) == 0)
+        {
+            NTL::SetCoeff(sk.s2, randomLong, -2);
+            NTL::SetCoeff(g, randomLong, -2);
+            i++;
+        }
+    }
 
 #if DEBUG
 	std::cout << "f =" << sk.s1 << std::endl;
 	std::cout << "g =" << sk.s2 << std::endl;
+	std::cout << "g =" << g << std::endl;
 #endif
 
 	sk.ls1 = new unsigned char[2*N-1];
@@ -177,10 +244,10 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	NTL::ZZ_pE tmp;
 	conv(pX, -(sk.s2));
 	NTL::conv(tmp, pX);
-	NTL::mul(aq, aq, tmp); // aq = -(2g+1)/f
+	NTL::mul(aq, aq, tmp); // aq_invert = -(2g+1)/f
 
-	//std::cout << "aq=" << aq << std::endl;
-	pX = rep(aq);
+	//std::cout << "aq_invert=" << aq_invert << std::endl;
+	/*pX = rep(aq);
 
 	pk.a1 = new long[2*N-1];
 	pk.offset = N-1;
@@ -210,18 +277,22 @@ KeyGen::KeyGen(const Setup setup, Entropy* random) {
 	fftKeygen.direct(pk.a_fft);
 	for (i=0; i<N; i++)
 		pk.a_fft[i] = bmodQ(pk.a_fft[i]);
-	pk.modulus = 2*Q;
+	pk.modulus = 2*Q;*/
 
+    NTL::clear(this->aq_invert);
     NTL::ZZ_pX tmp_aq_px;
     NTL::ZZ_pE tmp_aq_pe;
     NTL::conv(tmp_aq_px, sk.s2);
-    NTL::conv(this->aq, tmp_aq_px);
-    NTL::inv(this->aq, this->aq);
+    NTL::conv(this->aq_invert, tmp_aq_px);
+    NTL::inv(this->aq_invert, this->aq_invert);
     NTL::conv(tmp_aq_px, sk.s1);
     NTL::conv(tmp_aq_pe, tmp_aq_px);
-    NTL::mul(this->aq, this->aq, tmp_aq_pe);
+    NTL::mul(this->aq_invert, this->aq_invert, tmp_aq_pe);
 
-    std::cout << "aq: " << this->aq << std::endl;
+#ifdef DEBUG
+    std::cout << "aq_invert: " << this->aq_invert << std::endl;
+    std::cout << "a^-1 * a == 1: " << ((this->aq_invert * -aq == 1) ? "true" : "false") << std::endl;
+#endif
 }
 
 /*
